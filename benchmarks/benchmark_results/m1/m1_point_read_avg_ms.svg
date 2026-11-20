@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="185" viewBox="0 0 820 185" font-family="sans-serif" font-size="14">
+<rect width="100%" height="100%" fill="white"/>
+<text x="20" y="30" font-size="21">NSM vs DSM · Point lookup</text>
+<text x="20" y="54">Milliseconds · mean ± 1 sample SD</text>
+<text x="20" y="87">NSM</text>
+<rect x="230" y="73" width="182.87" height="18" fill="#348096"/>
+<path d="M358.26 82H467.48 M358.26 77v10 M467.48 77v10" stroke="#17333b"/>
+<text x="665" y="87">0.06022 ± 0.018</text>
+<text x="20" y="127">DSM</text>
+<rect x="230" y="113" width="396.19" height="18" fill="#348096"/>
+<path d="M612.38 122H640.00 M612.38 117v10 M640.00 117v10" stroke="#17333b"/>
+<text x="665" y="127">0.1305 ± 0.00455</text>
+</svg>
