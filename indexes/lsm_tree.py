@@ -1,7 +1,7 @@
 """Two-level LSM index with immutable slotted-page runs and background compaction."""
 
 import heapq
-from bisect import bisect_right, insort
+from bisect import bisect_right
 from collections.abc import Generator, Iterable
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import ExitStack, closing
@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from itertools import groupby
 from operator import itemgetter
 from pathlib import Path
+from random import Random
 from threading import RLock
 from typing import Self
 
@@ -21,6 +22,63 @@ from storage.records import (
 Key = int | str
 Value = int | float | bool | str | tuple[int, int]
 Entry = tuple[Key, bytes]
+
+
+class _Node:
+    def __init__(self, key: Key, data: bytes, height: int):
+        self.key = key
+        self.data = data
+        self.forward: list[_Node | None] = [None] * height
+
+
+class _SkipList:
+    """Ordered MemTable. Level zero links every key in flush order."""
+
+    def __init__(self, capacity: int):
+        self._height = capacity.bit_length()
+        self._random = Random(302)  # Reproducible promotions, independent of workload RNG.
+        self.clear()
+
+    def clear(self) -> None:
+        self._head = _Node(0, b"", self._height)  # The sentinel key is never compared.
+        self.size = 0
+
+    def _locate(self, key: Key, previous: list[_Node] | None = None) -> _Node | None:
+        node = self._head
+        for level in reversed(range(self._height)):
+            nxt = node.forward[level]
+            while nxt is not None and nxt.key < key:
+                node = nxt
+                nxt = node.forward[level]
+            if previous is not None:
+                previous[level] = node
+        match = node.forward[0]
+        return match if match is not None and match.key == key else None
+
+    def put(self, key: Key, data: bytes) -> None:
+        previous = [self._head] * self._height
+        match = self._locate(key, previous)
+        if match is not None:
+            match.data = data
+            return
+        height = 1
+        while height < self._height and self._random.getrandbits(1):
+            height += 1
+        node = _Node(key, data, height)
+        for level in range(height):
+            node.forward[level] = previous[level].forward[level]
+            previous[level].forward[level] = node
+        self.size += 1
+
+    def get(self, key: Key) -> bytes | None:
+        node = self._locate(key)
+        return node.data if node is not None else None
+
+    def entries(self) -> Generator[Entry, None, None]:
+        node = self._head.forward[0]
+        while node is not None:
+            yield node.key, node.data
+            node = node.forward[0]
 
 
 def _encode(key: Key, value: Value) -> bytes:
@@ -142,8 +200,7 @@ class LSMTree:
         self._limit = memtable_limit
         self._threshold = compaction_threshold
         self._disk_factory = disk_factory
-        self._memtable: dict[Key, bytes] = {}
-        self._sorted_keys: list[Key] = []
+        self._memtable = _SkipList(memtable_limit)
         self._lock = RLock()
         self._closed = False
 
@@ -178,10 +235,8 @@ class LSMTree:
             self._check_key(key)
             data = _encode(key, value)
             self._key_type = type(key)
-            if key not in self._memtable:
-                insort(self._sorted_keys, key)
-            self._memtable[key] = data
-            if len(self._memtable) >= self._limit:
+            self._memtable.put(key, data)
+            if self._memtable.size >= self._limit:
                 self._flush_locked()
 
     def search(self, key: Key) -> Value | None:
@@ -189,8 +244,9 @@ class LSMTree:
         with self._lock:
             self._check_open()
             self._check_key(key)
-            if key in self._memtable:
-                return _decode(self._memtable[key])[1]
+            data = self._memtable.get(key)
+            if data is not None:
+                return _decode(data)[1]
             for run in reversed(self._level0):
                 value = run.search(key)
                 if value is not None:
@@ -198,14 +254,12 @@ class LSMTree:
             return self._base.search(key) if self._base else None
 
     def _flush_locked(self) -> None:
-        if self._memtable:
+        if self._memtable.size:
             path = self._directory / f"L0-{self._next_generation:016d}.sst"
-            entries = ((key, self._memtable[key]) for key in self._sorted_keys)
-            run = _SSTable.write(path, entries, self._disk_factory)
+            run = _SSTable.write(path, self._memtable.entries(), self._disk_factory)
             self._level0.append(run)
             self._next_generation += 1
             self._memtable.clear()
-            self._sorted_keys.clear()
         self._schedule_compaction()
 
     def flush(self) -> None:

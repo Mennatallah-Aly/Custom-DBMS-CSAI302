@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="345" viewBox="0 0 820 345" font-family="sans-serif" font-size="14">
+<rect width="100%" height="100%" fill="white"/>
+<text x="20" y="30" font-size="21">Foreground insert</text>
+<text x="20" y="54">Milliseconds · mean ± 1 sample SD</text>
+<text x="20" y="87">read-heavy / B+ Tree</text>
+<rect x="230" y="73" width="216.76" height="18" fill="#348096"/>
+<path d="M379.04 82H514.47 M379.04 77v10 M514.47 77v10" stroke="#17333b"/>
+<text x="665" y="87">0.05808 ± 0.0181</text>
+<text x="20" y="127">read-heavy / LSM Tree</text>
+<rect x="230" y="113" width="224.75" height="18" fill="#348096"/>
+<path d="M410.89 122H498.60 M410.89 117v10 M498.60 117v10" stroke="#17333b"/>
+<text x="665" y="127">0.06022 ± 0.0118</text>
+<text x="20" y="167">read-heavy / Full Table Scan</text>
+<rect x="230" y="153" width="209.91" height="18" fill="#348096"/>
+<path d="M378.44 162H501.38 M378.44 157v10 M501.38 157v10" stroke="#17333b"/>
+<text x="665" y="167">0.05625 ± 0.0165</text>
+<text x="20" y="207">write-heavy / B+ Tree</text>
+<rect x="230" y="193" width="242.72" height="18" fill="#348096"/>
+<path d="M305.44 202H640.00 M305.44 197v10 M640.00 197v10" stroke="#17333b"/>
+<text x="665" y="207">0.06504 ± 0.0448</text>
+<text x="20" y="247">write-heavy / LSM Tree</text>
+<rect x="230" y="233" width="340.57" height="18" fill="#348096"/>
+<path d="M501.95 242H639.20 M501.95 237v10 M639.20 237v10" stroke="#17333b"/>
+<text x="665" y="247">0.09126 ± 0.0184</text>
+<text x="20" y="287">write-heavy / Full Table Scan</text>
+<rect x="230" y="273" width="143.29" height="18" fill="#348096"/>
+<path d="M343.01 282H403.57 M343.01 277v10 M403.57 277v10" stroke="#17333b"/>
+<text x="665" y="287">0.03839 ± 0.00811</text>
+</svg>

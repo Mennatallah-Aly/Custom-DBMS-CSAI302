@@ -9,9 +9,32 @@ from indexes.lsm_tree import LSMTree
 from storage.disk_manager import DiskManager
 from storage.layouts import ColumnLayout, RowLayout
 from storage.page import SlottedPage
+from storage.records import deserialize_record
 
 
 class LSMTests(unittest.TestCase):
+    def test_reverse_inserts_and_updates_flush_in_key_order_without_duplicates(self):
+        count = 512
+        with LSMTree(self.root, memtable_limit=count) as index:
+            for key in reversed(range(1, count)):
+                index.insert(key, "initial")
+            for key in range(1, count, 2):
+                index.insert(key, f"value-{key}")
+            self.assertEqual(list(self.root.glob("L0-*.sst")), [])
+            index.insert(0, "zero")
+            run, = self.root.glob("L0-*.sst")
+            data = run.read_bytes()
+            entries = []
+            for start in range(0, len(data), SlottedPage.PAGE_SIZE):
+                page = SlottedPage.from_bytes(data[start:start + SlottedPage.PAGE_SIZE])
+                entries.extend(deserialize_record(page.get_record(slot))
+                               for slot in range(page.slot_count))
+            self.assertEqual([key for key, _ in entries], list(range(count)))
+        with LSMTree(self.root) as index:
+            self.assertEqual(index.search(0), "zero")
+            for key in range(1, count):
+                self.assertEqual(index.search(key), f"value-{key}" if key % 2 else "initial")
+
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)

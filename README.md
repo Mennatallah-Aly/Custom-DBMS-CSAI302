@@ -36,7 +36,7 @@ Pending rows are published when the next row no longer fits, on an explicit `flu
 
 `LSMTree(directory, memtable_limit=128, compaction_threshold=4)` supports `insert(key, value)` and `search(key)`. Use either integer keys or string keys throughout an index. Values can be logical row IDs, non-null scalar fields, or physical `(page_id, slot_id)` pairs. Inserting an existing key updates its value. Missing keys return `None`.
 
-The MemTable stores values in a dictionary and maintains a sorted list of its distinct keys. Lookups and replacements in memory use the dictionary. Only a new key needs insertion into the sorted list. Reaching the distinct-key limit flushes an immutable, sorted L0 SSTable. A point lookup searches memory, L0 from newest to oldest, then L1. Each run keeps its first key per page in memory, so a lookup reads at most one candidate page per run.
+The MemTable is a skip list. Its upper levels accelerate point lookup and insertion, while its bottom level streams distinct keys in sorted order. Replacing a value keeps the same node. Reaching the distinct-key limit flushes an immutable, sorted L0 SSTable. A point lookup searches memory, L0 from newest to oldest, then L1. Each run keeps its first key per page in memory, so a lookup reads at most one candidate page per run.
 
 Once enough L0 files accumulate, a background worker merges the oldest batch with L1. It streams sorted entries, keeps the newest value per key, and atomically renames the completed file before retiring its inputs. A new L1 filename records the highest generation it covers. Reopening ignores older covered files if cleanup was interrupted. Writes arriving during the merge remain searchable.
 
@@ -51,3 +51,45 @@ Run Member 2's correctness and integration tests from the repository root. The t
 ```powershell
 python -m unittest discover -s tests -p "test_member2_*.py" -v
 ```
+
+## Member 4 · persistence, object storage and benchmarks
+
+Use `ObjectStore(directory).put(blob)` for large byte strings. Store the returned
+object ID in a regular table field and pass it to `get(object_id)` after reopening.
+Each immutable object occupies its own file of checksummed 4096-byte slotted pages.
+The header records the plaintext and stored lengths. Publication occurs after all
+chunks are written. The current API processes one complete blob in memory.
+
+```python
+from storage.object_store import ObjectStore
+
+objects = ObjectStore("documents")
+document_id = objects.put(b"example document")
+assert objects.get(document_id) == b"example document"
+```
+
+An optional pair of byte-to-byte callbacks, `encrypt=` and `decrypt=`, protects
+the payload before writing and restores it after reading. The caller supplies the
+encryption scheme and keys. The object ID and header lengths remain visible.
+The AES-GCM integration test uses an ephemeral key and requires `cryptography`.
+
+Run the tests and reproduce both sets of measurements from the repository root.
+The replacement-policy experiment uses Member 3's `storage/buffer_pool.py`.
+
+```powershell
+python -m unittest discover -s tests -v
+python -m benchmarks.bench_m1
+python -m benchmarks.bench_m2
+```
+
+The scripts write raw per-run CSVs, summaries, environment and workload settings,
+and plots under `benchmark_results/m1` and `benchmark_results/m2`. Both use
+seed 302, warm-up, and five measured repetitions per configuration by default.
+The M1 policy test compares identical page sequences on eight frames. Its hit/miss
+ratios describe the DBMS buffer pool. Page I/O timings measure calls to DiskManager
+and include effects of the operating system's file cache.
+
+M2 starts with 500 rows and replays 200 operations, with either 90% reads or
+90% writes. Indexed lookup timing includes fetching the matching row. The B+
+Tree searches a reloaded snapshot in memory, while the LSM can read SSTable
+pages. The CSV records foreground operations and persistence costs separately.

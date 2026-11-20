@@ -1,4 +1,5 @@
 import tempfile
+import json
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -6,9 +7,29 @@ from unittest.mock import patch
 from storage.disk_manager import DiskManager
 from storage.layouts import ColumnLayout, RowLayout
 from storage.page import SlottedPage
+from storage.records import MAX_RECORD_BYTES
 
 
 class LayoutTests(unittest.TestCase):
+    def test_legacy_full_schema_page_survives_group_count_growth(self):
+        for layout in (RowLayout, ColumnLayout):
+            with self.subTest(layout=layout.__name__):
+                path = self.root / layout.__name__
+                # Page zero from the original writer, with no room for another digit.
+                meta = {"format": layout.kind, "columns": [""], "groups": 0}
+                overhead = len(json.dumps(meta, separators=(",", ":")).encode())
+                name = "x" * (MAX_RECORD_BYTES - overhead)
+                meta["columns"] = [name]
+                header = SlottedPage(0)
+                header.insert_record(json.dumps(meta, separators=(",", ":")).encode())
+                path.write_bytes(header.to_bytes())
+                with layout(path) as table:
+                    for i in range(12):
+                        table.insert((i,))
+                        table.flush()
+                with layout(path, [name]) as table:
+                    self.assertEqual(list(table.scan()), [(i,) for i in range(12)])
+
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)

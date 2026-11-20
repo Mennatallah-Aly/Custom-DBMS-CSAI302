@@ -9,7 +9,8 @@ from typing import Self
 from storage.disk_manager import DiskManager
 from storage.page import SlottedPage
 from storage.records import (
-    DiskFactory, Scalar, deserialize_record, new_page_file, read_slotted_page, serialize_record,
+    MAX_RECORD_BYTES, DiskFactory, Scalar, deserialize_record, new_page_file,
+    read_slotted_page, serialize_record,
 )
 
 
@@ -46,6 +47,8 @@ class _Layout:
         try:
             header = read_slotted_page(self._disk, 0)
             meta = json.loads(header.get_record(0))
+            if isinstance(meta, list) and len(meta) == 3:
+                meta = dict(zip(("format", "columns", "groups"), meta))
             if not isinstance(meta, dict) or meta.get("format") != self.kind:
                 raise ValueError("Table layout does not match the requested layout")
             self.columns = _column_names(meta.get("columns", ()))
@@ -70,8 +73,13 @@ class _Layout:
 
     def _header(self, groups: int) -> bytes:
         info = {"format": self.kind, "columns": self.columns, "groups": groups}
+        data = json.dumps(info, separators=(",", ":")).encode("utf-8")
+        if groups and len(data) > MAX_RECORD_BYTES:
+            # Existing schemas already fit at creation. Omitting the field names
+            # frees more than enough space for any 32-bit page count to grow.
+            data = json.dumps([self.kind, self.columns, groups], separators=(",", ":")).encode("utf-8")
         page = SlottedPage(0)
-        page.insert_record(json.dumps(info, separators=(",", ":")).encode("utf-8"))
+        page.insert_record(data)
         return page.to_bytes()
 
     def _page_id(self, group: int, stream: int) -> int:
