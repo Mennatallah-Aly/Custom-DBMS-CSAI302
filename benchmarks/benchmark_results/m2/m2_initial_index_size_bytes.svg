@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="345" viewBox="0 0 820 345" font-family="sans-serif" font-size="14">
+<rect width="100%" height="100%" fill="white"/>
+<text x="20" y="30" font-size="21">Index size after build</text>
+<text x="20" y="54">Bytes · mean ± 1 sample SD</text>
+<text x="20" y="87">read-heavy / B+ Tree</text>
+<rect x="230" y="73" width="410.00" height="18" fill="#348096"/>
+<path d="M640.00 82H640.00 M640.00 77v10 M640.00 77v10" stroke="#17333b"/>
+<text x="665" y="87">1.536e+06 ± 0</text>
+<text x="20" y="127">read-heavy / LSM Tree</text>
+<rect x="230" y="113" width="3.28" height="18" fill="#348096"/>
+<path d="M233.28 122H233.28 M233.28 117v10 M233.28 117v10" stroke="#17333b"/>
+<text x="665" y="127">1.229e+04 ± 0</text>
+<text x="20" y="167">read-heavy / Full Table Scan</text>
+<rect x="230" y="153" width="0.00" height="18" fill="#348096"/>
+<path d="M230.00 162H230.00 M230.00 157v10 M230.00 157v10" stroke="#17333b"/>
+<text x="665" y="167">0 ± 0</text>
+<text x="20" y="207">write-heavy / B+ Tree</text>
+<rect x="230" y="193" width="410.00" height="18" fill="#348096"/>
+<path d="M640.00 202H640.00 M640.00 197v10 M640.00 197v10" stroke="#17333b"/>
+<text x="665" y="207">1.536e+06 ± 0</text>
+<text x="20" y="247">write-heavy / LSM Tree</text>
+<rect x="230" y="233" width="3.28" height="18" fill="#348096"/>
+<path d="M233.28 242H233.28 M233.28 237v10 M233.28 237v10" stroke="#17333b"/>
+<text x="665" y="247">1.229e+04 ± 0</text>
+<text x="20" y="287">write-heavy / Full Table Scan</text>
+<rect x="230" y="273" width="0.00" height="18" fill="#348096"/>
+<path d="M230.00 282H230.00 M230.00 277v10 M230.00 277v10" stroke="#17333b"/>
+<text x="665" y="287">0 ± 0</text>
+</svg>

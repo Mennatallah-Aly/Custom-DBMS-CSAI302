@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="185" viewBox="0 0 820 185" font-family="sans-serif" font-size="14">
+<rect width="100%" height="100%" fill="white"/>
+<text x="20" y="30" font-size="21">LRU vs FIFO · cache hit rate</text>
+<text x="20" y="54">Percent · mean ± 1 sample SD</text>
+<text x="20" y="87">LRU</text>
+<rect x="230" y="73" width="395.80" height="18" fill="#348096"/>
+<path d="M611.59 82H640.00 M611.59 77v10 M640.00 77v10" stroke="#17333b"/>
+<text x="665" y="87">79.8 ± 2.86</text>
+<text x="20" y="127">FIFO</text>
+<rect x="230" y="113" width="348.68" height="18" fill="#348096"/>
+<path d="M559.58 122H597.78 M559.58 117v10 M597.78 117v10" stroke="#17333b"/>
+<text x="665" y="127">70.3 ± 3.85</text>
+</svg>
