@@ -1,0 +1,14 @@
+{
+  "buffer_pool_benchmark": "completed",
+  "seed": 302,
+  "payload_size": 128,
+  "point_reads": 200,
+  "warm_up_per_layout": 1,
+  "python": "3.14.1",
+  "os": "Windows-10-10.0.19045-SP0",
+  "processor": "Intel64 Family 6 Model 142 Stepping 9, GenuineIntel",
+  "policy_setup": "32 pages, 8 frames, warm pages 0..7; 80% of requests target pages 0..3",
+  "repeats_per_layout": 5,
+  "rows_per_run": 500,
+  "plots_created": true
+}

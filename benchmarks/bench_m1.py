@@ -349,51 +349,104 @@ def _make_plots(summary_rows: list[dict], output_dir: Path) -> bool:
     return True
 
 
+
+
 def _policy_runs(root: Path, repeats: int, seed: int, accesses: int) -> list[dict]:
     from storage.buffer_pool import BufferPoolManager
 
     path = root / "pages.db"
     disk = DiskManager(path)
     expected = []
+
     try:
+        # Prepare 32 pages on disk.
         for _ in range(32):
             page = SlottedPage(disk.allocate_page())
             page.insert_record(str(page.page_id).encode())
             raw = page.to_bytes()
             disk.write_page(page.page_id, raw)
             expected.append(raw)
+
+        results = []
+
+        for repeat in range(1, repeats + 1):
+            trace_seed = seed + repeat * 1009
+            rng = random.Random(trace_seed)
+
+            trace = [
+                rng.randrange(4) if rng.random() < 0.8 else rng.randrange(4, 32)
+                for _ in range(accesses)
+            ]
+
+            policies = ("LRU", "FIFO") if repeat % 2 else ("FIFO", "LRU")
+
+            for policy in policies:
+                pool = BufferPoolManager(
+                    pool_size=8,
+                    disk_manager=disk,
+                    policy=policy
+                )
+
+                try:
+                    # Warm up the first eight pages.
+                    for page_id in range(8):
+                        pool.fetch_page(page_id)
+                        pool.unpin_page(page_id)
+
+                    pool.reset_stats()
+                    elapsed = []
+
+                    # Run the access trace.
+                    for page_id in trace:
+                        start = time.perf_counter_ns()
+                        data = pool.fetch_page(page_id)
+                        elapsed.append(
+                            (time.perf_counter_ns() - start) / 1e6
+                        )
+
+                        if data != expected[page_id]:
+                            raise AssertionError(
+                                "Buffer pool returned the wrong page"
+                            )
+
+                        pool.unpin_page(page_id)
+
+                    stats = {
+                        "cache_hits": pool.hits,
+                        "cache_misses": pool.misses,
+                    }
+
+                    if stats["cache_hits"] + stats["cache_misses"] != accesses:
+                        raise AssertionError(
+                            "Cache counters do not match the trace"
+                        )
+
+                    results.append({
+                        "policy": policy,
+                        "repeat": repeat,
+                        "seed": trace_seed,
+                        "cache_hits": stats["cache_hits"],
+                        "cache_misses": stats["cache_misses"],
+                        "hit_ratio": (
+                            stats["cache_hits"] / accesses
+                            if accesses > 0 else 0.0
+                        ),
+                        "miss_ratio": (
+                            stats["cache_misses"] / accesses
+                            if accesses > 0 else 0.0
+                        ),
+                        "disk_reads": stats["cache_misses"],
+                        "mean_access_ms": _mean(elapsed),
+                        "p95_access_ms": _percentile(elapsed, 0.95),
+                    })
+
+                finally:
+                    pool.flush_all()
+
+        return results
+
     finally:
         disk.close()
-
-    results = []
-    for repeat in range(1, repeats + 1):
-        trace_seed = seed + repeat * 1009
-        rng = random.Random(trace_seed)
-        trace = [rng.randrange(4) if rng.random() < 0.8 else rng.randrange(4, 32)
-                 for _ in range(accesses)]
-        policies = ("LRU", "FIFO") if repeat % 2 else ("FIFO", "LRU")
-        for policy in policies:
-            with BufferPoolManager(path, pool_size=8, replacement_policy=policy) as pool:
-                for page_id in range(8):
-                    pool.read_page(page_id)
-                pool.reset_stats()
-                elapsed = []
-                for page_id in trace:
-                    start = time.perf_counter_ns()
-                    data = pool.read_page(page_id)
-                    elapsed.append((time.perf_counter_ns() - start) / 1e6)
-                    if data != expected[page_id]:
-                        raise AssertionError("Buffer pool returned the wrong page")
-                stats = pool.get_stats()
-                if stats["cache_hits"] + stats["cache_misses"] != accesses:
-                    raise AssertionError("Cache counters do not match the trace")
-                results.append(dict(policy=policy, repeat=repeat, seed=trace_seed,
-                                    accesses=accesses, mean_access_ms=_mean(elapsed),
-                                    p95_access_ms=_percentile(elapsed, 0.95),
-                                    **{k: stats[k] for k in ("cache_hits", "cache_misses",
-                                       "hit_ratio", "miss_ratio", "disk_reads", "evictions")}))
-    return results
-
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Benchmark existing NSM and DSM storage layouts.")

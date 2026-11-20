@@ -1,0 +1,31 @@
+{
+  "seed": 302,
+  "rows": 500,
+  "operations": 200,
+  "payload_size": 64,
+  "memtable_limit": 64,
+  "compaction_threshold": 4,
+  "warm_up_per_strategy": 1,
+  "python": "3.14.1",
+  "os": "Windows-10-10.0.19045-SP0",
+  "processor": "Intel64 Family 6 Model 142 Stepping 9, GenuineIntel",
+  "strategies": [
+    "B+ Tree",
+    "LSM Tree",
+    "Full Table Scan"
+  ],
+  "workloads": {
+    "read-heavy": "90% reads / 10% writes",
+    "write-heavy": "10% reads / 90% writes"
+  },
+  "repeats_per_strategy_and_workload": 5,
+  "plots_created": true,
+  "methodology_notes": [
+    "B+ Tree point searches are in-memory after loading a full BPlusTreeStorage snapshot.",
+    "LSM Tree is explicitly flushed, compacted, closed and reopened before its initial lookup phase.",
+    "Indexed lookup latency includes index search plus RowLayout.get_row.",
+    "Full Table Scan lookup latency scans the same RowLayout and returns the matching row.",
+    "Full Table Scan has no index; its index size is recorded as zero and its index build/insert metrics are not applicable.",
+    "Final persistence time is reported separately from foreground write-path latency."
+  ]
+}
