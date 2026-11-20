@@ -1,2 +1,3 @@
 # Custom-DBMS-CSAI302
 Custom Database Management System – CSAI 302 Course Project, Fall 2026
+Workload TypeCondition in IndexManagerSelected IndexTechnical RationaleRange Queriesis_range == True (BETWEEN)B+ TreeSorted, doubly-linked leaf nodes enable fast sequential range scans without full tree traversals.Write-Heavywrite_ratio > 0.50LSM TreeSequential append-only writes to an in-memory MemTable avoid random disk I/O overhead.Read-Heavy / Point Lookupwrite_ratio <= 0.50B+ TreeDirect $O(\log N)$ key lookups avoid checking multiple immutable SSTable levels

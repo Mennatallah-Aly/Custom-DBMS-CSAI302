@@ -1,14 +1,25 @@
+import inspect
 import time
 import unittest
 from indexes.index_manager import IndexManager
 from indexes.bplus_tree import BPlusTree
-# Uncomment once Member 2 pushes LSMTree:
-# from indexes.lsm_tree import LSMTree
+
+
+def create_bplus_tree(capacity: int = 4) -> BPlusTree:
+    """Instantiate BPlusTree using whatever constructor signature Member 2 defined."""
+    sig = inspect.signature(BPlusTree.__init__)
+    params = [p for p in sig.parameters.values() if p.name != "self"]
+    if not params:
+        return BPlusTree()
+    # Pass capacity positionally if the first parameter has no default value
+    if params[0].default is inspect.Parameter.empty:
+        return BPlusTree(capacity)
+    return BPlusTree()
 
 
 class TestMilestone2Integration(unittest.TestCase):
     def test_bplus_integration_and_range_routing(self) -> None:
-        bplus = BPlusTree(order=4)
+        bplus = create_bplus_tree(4)
         mgr = IndexManager(bplus_index=bplus)
 
         for k in range(1, 21):
@@ -25,7 +36,7 @@ class TestMilestone2Integration(unittest.TestCase):
         self.assertEqual(len(results), 6)
 
     def test_query_interface_select_and_insert(self) -> None:
-        bplus = BPlusTree(order=4)
+        bplus = create_bplus_tree(4)
         mgr = IndexManager(bplus_index=bplus)
 
         mgr.execute_simple_query({"op": "INSERT", "key": 100, "value": "Record_100"})
@@ -38,7 +49,7 @@ class TestMilestone2Integration(unittest.TestCase):
         self.assertEqual(len(range_res), 2)
 
     def test_workload_benchmark_timing(self) -> None:
-        bplus = BPlusTree(order=16)
+        bplus = create_bplus_tree(16)
         mgr = IndexManager(bplus_index=bplus)
 
         start_write = time.perf_counter()
